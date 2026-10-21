@@ -1,0 +1,12 @@
+{
+  "name": "@msapi/importer",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@msapi/db": "*",
+    "pg": "^8.23.1"
+  }
+}

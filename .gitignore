@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+# Raw crawl data never goes in git (archived to R2 instead)
+data-raw/
+import-report.md

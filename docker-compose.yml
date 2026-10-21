@@ -1,0 +1,22 @@
+# Local Postgres for development and tests: `npm run db:up`.
+# Port 5433 so it doesn't clash with any Postgres already on 5432.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: msapi
+      POSTGRES_PASSWORD: msapi # local only; real credentials come from Railway
+      POSTGRES_DB: msapi
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msapi -d msapi"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:

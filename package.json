@@ -1,0 +1,33 @@
+{
+  "name": "muslim-scholars-api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "node --env-file-if-exists=.env packages/db/src/migrate.ts",
+    "import": "node --env-file-if-exists=.env packages/importer/src/cli.ts",
+    "import:fill": "node --env-file-if-exists=.env packages/importer/src/cli.ts --fill-empty",
+    "dev": "node --env-file-if-exists=.env --watch packages/api/src/server.ts",
+    "start": "node packages/api/src/server.ts",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "eslint": "^10.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

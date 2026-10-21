@@ -1,0 +1,14 @@
+{
+  "name": "@msapi/api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@fastify/swagger": "^9.9.2",
+    "@fastify/swagger-ui": "^6.1.2",
+    "@fastify/type-provider-typebox": "^6.3.0",
+    "@msapi/db": "*",
+    "fastify": "^5.12.7",
+    "kysely": "^0.29.7",
+    "typebox": "^1.4.2"
+  }
+}
