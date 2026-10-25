@@ -1,5 +1,8 @@
 import { createDb, migrate } from '@msapi/db';
 import { buildApp } from './app.ts';
+import { closeSentry, initSentry } from './sentry.ts';
+
+initSentry();
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is not set (copy .env.example to .env)');
@@ -12,6 +15,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     await app.close();
     await db.destroy();
+    await closeSentry();
     process.exit(0);
   });
 }

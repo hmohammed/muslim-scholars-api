@@ -1,4 +1,5 @@
 import type { FastifyError, FastifyInstance } from 'fastify';
+import { captureServerError } from './sentry.ts';
 
 export function problem(status: number, detail: string): Error & { statusCode: number } {
   return Object.assign(new Error(detail), { statusCode: status });
@@ -7,7 +8,10 @@ export function problem(status: number, detail: string): Error & { statusCode: n
 export function registerErrors(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 500 ? error.statusCode : 500;
-    if (status === 500) request.log.error({ err: error }, 'request failed');
+    if (status === 500) {
+      request.log.error({ err: error }, 'request failed');
+      captureServerError(error);
+    }
     const titles: Record<number, string> = {
       400: 'Bad Request',
       401: 'Unauthorized',
