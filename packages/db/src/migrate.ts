@@ -6,11 +6,12 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { pgConfig } from './pg-config.ts';
 
 const MIGRATIONS_DIR = fileURLToPath(new URL('../migrations/', import.meta.url));
 
 export async function migrate(connectionString: string, log: (msg: string) => void = () => {}): Promise<string[]> {
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client(pgConfig(connectionString));
   await client.connect();
   try {
     await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
