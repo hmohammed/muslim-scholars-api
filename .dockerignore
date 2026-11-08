@@ -1,0 +1,13 @@
+node_modules
+data
+.git
+.github
+.env
+.env.*
+*.md
+docs
+**/test
+**/*.test.ts
+coverage
+.vscode
+.cursor
