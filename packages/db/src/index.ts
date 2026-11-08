@@ -4,6 +4,8 @@ import { pgConfig } from './pg-config.ts';
 import type { Database } from './schema.ts';
 
 export type { Database, DeathCause, Madhhab, RelationType, ScholarCategory, ScholarGrade } from './schema.ts';
+export { buildDataset, type BuiltDataset } from './dataset.ts';
+export { DATASET_FILES, isDatasetVersion, type DatasetFileName } from './dataset-tables.ts';
 export { migrate } from './migrate.ts';
 export { normalizeAr } from './normalize.ts';
 export { pgConfig } from './pg-config.ts';

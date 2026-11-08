@@ -454,11 +454,23 @@ export async function registerV1(app: FastifyInstance): Promise<void> {
   app.get('/v1/meta', {
     schema: { tags: ['meta'], summary: 'Dataset version, import time and attribution' },
   }, async () => {
-    const row = await db.selectFrom('scholar')
-      .select(sql<number>`count(*)::int`.as('scholars'))
-      .select(sql<Date | null>`max(updated_at)`.as('imported_at'))
-      .executeTakeFirstOrThrow();
-    return envelope({ scholars: row.scholars, imported_at: row.imported_at, attribution: ATTRIBUTION });
+    const [row, release] = await Promise.all([
+      db.selectFrom('scholar')
+        .select(sql<number>`count(*)::int`.as('scholars'))
+        .select(sql<Date | null>`max(updated_at)`.as('imported_at'))
+        .executeTakeFirstOrThrow(),
+      db.selectFrom('dataset_release')
+        .select('version')
+        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
+        .executeTakeFirst(),
+    ]);
+    return envelope({
+      scholars: row.scholars,
+      imported_at: row.imported_at,
+      attribution: ATTRIBUTION,
+      downloads: { href: '/datasets', latest: release?.version ?? null },
+    });
   });
 }
 

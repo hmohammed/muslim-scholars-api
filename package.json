@@ -14,6 +14,7 @@
     "db:migrate": "node --env-file-if-exists=.env packages/db/src/migrate.ts",
     "import": "node --env-file-if-exists=.env packages/importer/src/cli.ts",
     "import:fill": "node --env-file-if-exists=.env packages/importer/src/cli.ts --fill-empty",
+    "dataset": "node --env-file-if-exists=.env packages/db/src/dataset-cli.ts",
     "dev": "node --env-file-if-exists=.env --watch packages/api/src/server.ts",
     "start": "node packages/api/src/server.ts",
     "typecheck": "tsc",

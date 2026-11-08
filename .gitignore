@@ -7,4 +7,6 @@ coverage/
 !.env.example
 # Raw crawl data never goes in git (archived to R2 instead)
 data-raw/
+# Built dataset downloads (npm run dataset)
+data/datasets/
 import-report.md

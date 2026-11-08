@@ -25,6 +25,7 @@ npm run dev            # http://localhost:3000/docs
 | `npm run db:down` | Stop Postgres (data is kept in a Docker volume) |
 | `npm run import` | Parse `RAW_HTML_DIR` and replace the local dataset. Writes `import-report.md` |
 | `npm run import:fill` | Fill only columns that are still empty and were not edited by hand |
+| `npm run dataset -- --version 2026-10-25` | Write a JSON, CSV and SQLite download of the public tables into `data/datasets` |
 
 The crawled HTML stays outside this repo. `RAW_HTML_DIR` in `.env` points at it. Reading that folder from WSL is slow when the project lives on the Windows drive; running Node on Windows, or moving the repo into the Linux filesystem, avoids that.
 

@@ -12,6 +12,7 @@ import { attributionHtml } from './attribution.ts';
 import { loadGraph, type ScholarGraph } from './graph.ts';
 import { registerErrors } from './http.ts';
 import { registerAdmin } from './routes/admin.ts';
+import { registerDatasets } from './routes/datasets.ts';
 import { registerPortal } from './routes/portal.ts';
 import { registerV1 } from './routes/v1.ts';
 
@@ -29,9 +30,10 @@ export interface AppOptions {
   db: Kysely<Database>;
   logLevel?: string;
   auth?: Partial<AuthConfig>;
+  datasetDir?: string;
 }
 
-export async function buildApp({ db, logLevel = 'info', auth: authInput }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, logLevel = 'info', auth: authInput, datasetDir }: AppOptions): Promise<FastifyInstance> {
   const auth = resolveAuth(authInput);
   const usage = new UsageMeter(db);
   const app = Fastify({
@@ -55,12 +57,13 @@ export async function buildApp({ db, logLevel = 'info', auth: authInput }: AppOp
   });
   app.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0] ?? request.url;
-    if (!path.startsWith('/v1')) return;
+    const shared = path.startsWith('/v1') || path.startsWith('/datasets');
+    if (!shared) return;
     reply.header('access-control-allow-origin', '*');
     reply.header('access-control-allow-headers', 'X-API-Key, Content-Type');
     reply.header('access-control-allow-methods', 'GET, OPTIONS');
     if (request.method === 'OPTIONS') return reply.code(204).send();
-    await requireApiKey(db, usage, auth, request);
+    if (path.startsWith('/v1')) await requireApiKey(db, usage, auth, request);
   });
 
   app.get('/docs/attribution', async (_request, reply) => {
@@ -108,6 +111,7 @@ export async function buildApp({ db, logLevel = 'info', auth: authInput }: AppOp
     return { status: 'ok' as const, db: 'ok' as const };
   });
 
+  await registerDatasets(app, datasetDir ?? process.env.DATASET_DIR ?? 'data/datasets');
   await registerV1(app);
   await registerPortal(app);
   await registerAdmin(app);

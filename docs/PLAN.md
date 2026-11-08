@@ -1,8 +1,8 @@
 # Muslim Scholars API: implementation plan
 
-Status: **draft for review**. Nothing is implemented yet.
+Status: **M0–M7 are in place.** M8 is the dashboard, a separate project. The infrastructure left from M5 and M6 is **M9** (section 12.1).
 
-Decisions marked **⚑** were made by Claude on your behalf after the interview, mostly in the database design. Every other decision comes from the interview (Q1–Q23). Please check the ⚑ items before implementation starts.
+Decisions marked **⚑** were made after the interview, mostly in the database design, and the implementation follows them. Every other decision comes from the interview (Q1–Q23). Section 14 keeps the list.
 
 ---
 
@@ -83,6 +83,8 @@ Known bad data:
      GitHub Actions ── nightly pg_dump ──► Cloudflare R2 (+ raw HTML archive)
      Sentry ◄── errors
 ```
+
+The diagram is the target. Sentry is already receiving production errors, and the private R2 bucket exists. Cloudflare in front of the API, and the nightly dump, are remaining points in M9 (section 12.1).
 
 **⚑ 4.1 Edge caching.** Q13 assumed Cloudflare would cache common requests. That doesn't work cleanly here: edge-cached responses would skip the API-key check and the usage counting. Cloudflare will provide DNS, TLS and DDoS protection, and cache only `/docs` and dataset downloads. Data responses use ETags plus an in-process cache, which is plenty for this data size.
 
@@ -213,7 +215,7 @@ Rule: when a date has no year and no place, the site's default cause "Natural" i
 | `api_key` (id, account_id, name, prefix, hash, per_day, per_second, created_at, last_used_at, revoked_at) | The key looks like `msk_live_<prefix>_<secret>` and is hashed with SHA-256 + a server-side pepper. It is shown once. |
 | `usage_daily` (api_key_id, day, requests) | Counted in memory and written to the database every ~10 s |
 | `audit_log` (id, account_id, entity, entity_id, field, old jsonb, new jsonb, at) | Written by admin routes in the same transaction |
-| `dataset_release` | later (Q17) |
+| `dataset_release` | Version label for a published JSON, CSV and SQLite download (Q17) |
 
 **⚑ 6.7 Rate-limit storage.** Per-second limits are kept in memory, which is correct for a single Railway instance. Daily quotas live in Postgres. Redis only comes in if you ever run several instances.
 
@@ -262,9 +264,15 @@ All routes need `X-API-Key`. Responses look like `{ data, meta: { next_cursor? }
 | `GET /v1/search?q=&lang=` | Fuzzy name search in Arabic and English |
 | `GET /v1/areas` · `/tags` · `/places` · `/books` · `/rumuz` | Lookup lists with counts |
 | `GET /v1/stats` | Counts by category, century, grade, … |
-| `GET /v1/meta` | Dataset version, import date, attribution, licence note |
+| `GET /v1/meta` | Dataset version, import date, attribution, licence note, link to the latest download |
+| `GET /datasets` | Published download versions. No key |
+| `GET /datasets/catalog` | Scholars plus teacher–student links, for the dashboard. No key |
+| `GET /datasets/{version}` | Row counts and file sizes for one version. No key |
+| `GET /datasets/{version}/muslim-scholars.sqlite` | SQLite download of the public tables. No key |
+| `GET /datasets/{version}/muslim-scholars.json` | The same tables as one JSON document. No key |
+| `GET /datasets/{version}/muslim-scholars.csv.zip` | One CSV per table. No key |
 | `GET /healthz` | No key needed |
-| `/docs`, `/openapi.json`, `/docs/attribution` | No key needed |
+| `/docs`, `/openapi.json`, `/docs/attribution`, `/datasets` | No key needed |
 | `/portal/*` | GitHub sign-in; create, name, revoke and view usage for keys (small server-rendered pages) |
 | `/admin/*` | Edit scholar fields and relations, view the audit log, set per-key limits, disable accounts. **Not in the public docs** |
 
@@ -288,6 +296,8 @@ Default limits (stored per key, editable): **1,000/day, 10/s**. The "Try it" doc
 
 ## 12. Milestones
 
+M0–M4 are done. M5 is done for everything that does not need a domain or a paid Railway plan: the API is public at `https://muslim-scholars-api-production.up.railway.app` (US East), Sentry receives server errors, `/docs/attribution` is live, and the private R2 bucket `muslim-scholars-backups` exists. Its token is stored as GitHub Actions secrets. M7 serves versioned JSON, CSV and SQLite downloads from `GET /datasets` (built with `npm run dataset`). M8 is a separate project. What was left of M5, and the old M6, is **M9**.
+
 | # | Deliverable | Done when |
 |---|---|---|
 | **M0** | Repo, Docker Compose Postgres, workspaces, CI skeleton, `.env.example` | `docker compose up` + `npm test` pass from a clean checkout |
@@ -295,19 +305,31 @@ Default limits (stored per key, editable): **1,000/day, 10/s**. The "Try it" doc
 | **M2** | Read API: scholars list/detail/search/lookups/meta + Swagger | Every route documented at `/docs` and tested; locally without keys |
 | **M3** | Graph: in-memory graph, teachers/students, network, chain | Chain from al-Bukhari to a Companion returns correct paths, under 50 ms |
 | **M4** | Accounts and keys: GitHub OAuth, portal, keys, rate limits, usage, admin, audit | Full sign-in → key → call → revoke flow tested |
-| **M5** | Deploy: Railway (EU), Cloudflare, Sentry, R2 nightly backups + HTML archive, attribution page | Public on `*.up.railway.app`; restoring from a backup has been tested once |
-| M6 | Domain + launch checklist | Domain bought, `api.<domain>` live |
-| M7 | Dataset downloads (JSON/CSV/SQLite) | Q17 |
-| M8 | Dashboard moves to the API | Separate project |
+| **M5** | Railway on its default address, Sentry, attribution page, R2 bucket ready | Public on `*.up.railway.app` with error reporting. Done. |
+| **M7** | Dataset downloads (JSON/CSV/SQLite) | `npm run dataset` writes a version, and `GET /datasets` serves all three formats without an API key |
+| M8 | Dashboard reads scholars from `GET /datasets/catalog`; commanders stay in that app’s own list | `islamic-scholars-dashboard-full`. Dev uses the local API, production uses Railway |
+| M9 | Remaining infrastructure | Every point in 12.1 is done |
 
-M0–M3 run entirely on your machine. Nothing needs an account or deployment until M4/M5.
+M0–M3 ran on your machine. M4 and M5 needed the accounts. M7 and M8 do not wait on M9.
+
+### 12.1 Remaining infrastructure (M9)
+
+Left until after the code milestones. The public address stays the Railway one until then.
+
+1. **Nightly database backup.** A GitHub Actions workflow runs `pg_dump` and uploads it to `muslim-scholars-backups`. `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` are already Actions secrets.
+2. **Raw HTML archive** in the same bucket (Q10, Q20).
+3. **One tested restore** from a backup.
+4. **Paid Railway plan.** Move the API and Postgres to EU (Q13). The trial account is US East, and the database volume is capped at 500 MB.
+5. **A domain** (Q18), then `api.<domain>` in front of Railway.
+6. **Cloudflare in front:** proxied DNS, TLS Full (strict), and DDoS protection. Cache only `/docs` and dataset downloads (⚑ 4.1). Do not cache `/v1`.
+7. **Production URL cutover.** Set `PUBLIC_URL` to `https://api.<domain>` and add `https://api.<domain>/portal/callback` on the production GitHub OAuth app.
 
 ## 13. Open items and prerequisites
 
 1. **Finish the crawl.** Let the sweep up to 41000 finish, then probe every 100th ID between 41000 and 100000 for another block (one extra crawler option). M1's final run needs the full cache; development can start on the current ~18k.
 2. **`refs.php`.** The site reference numbers point to the site's own reference list. Fetching that one page means **one** extra request to the site. OK?
 3. **Install Node 24 LTS** with nvm. Docker is already installed.
-4. **Accounts, needed by M4/M5, not now:** GitHub (repo + OAuth app), Railway (billing), Cloudflare (R2 + DNS later), Sentry.
+4. **Accounts.** GitHub, Railway, Cloudflare and Sentry are set up. DNS, the paid Railway plan, the nightly backup and a tested restore are M9 (12.1). They do not block M7.
 5. **Tag kinds and the rumuz table** need a short manual review by you (918 tags, ~25 codes). I'll propose them and you correct.
 6. **The Tahdheeb al-Kamal typed fields** are a best-effort extraction. The quality report will show how many could be identified, and we'll decide then whether that's good enough.
 7. **Attribution wording** for the API and docs. I'll draft it and you approve.
